@@ -1,0 +1,82 @@
+stages:
+  - build
+  - test
+
+
+variables:
+  SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+  IMAGE: '${ART_REGISTRY}/docker/cash/${CI_PROJECT_NAME}'
+  DOCKER_IMAGE: '${ART_REGISTRY}/docker:19.03.12-dind'
+  DAILY_IMAGE: '${ART_REGISTRY}/docker-daily/cash/${CI_PROJECT_NAME}'
+  BASE_IMAGE_VERSION: '1.0'
+  DOCKER_BUILDKIT: '1'
+
+.docker: &docker
+  image: $DOCKER_IMAGE
+
+  services:
+    - name: $DOCKER_IMAGE
+      command: ["--experimental"]
+
+  before_script:
+    - docker login -u $ART_USERNAME -p $ART_TOKEN $ART_REGISTRY
+
+current-image:
+  <<: *docker
+  stage: build
+  script:
+    - docker build --pull --build-arg BASE_APP_IMAGE=$IMAGE:base-$BASE_IMAGE_VERSION --ssh default --build-arg AUTO_CATALOGUE_SHA=$AUTO_CATALOGUE_SHA -t $IMAGE:$CI_COMMIT_SHORT_SHA -f Dockerfile .
+    - docker push $IMAGE:$CI_COMMIT_SHORT_SHA
+
+rspec:
+  stage: test
+  needs: ["current-image"]
+  image: $IMAGE:$CI_COMMIT_SHORT_SHA
+
+  before_script:
+    - git config --global user.email "you@example.com"
+    - git config --global user.name "Your Name"
+
+    - mkdir -p tmp
+    - gem install bundler -v '2.2.11'
+    - bundle install
+  script:
+    - rspec
+
+rubocop:
+  stage: test
+  image: '${ART_REGISTRY}/docker/cash/cash-rubocop:2.1.2'
+  needs: []
+  except:
+    - /^release\/.*$/
+    - tags
+  script:
+    - rubocop || true
+    - rubocop --format junit --display-only-failed --out rubocop.xml
+
+  artifacts:
+    paths:
+      - rubocop.xml
+    reports:
+      junit: rubocop.xml
+
+
+
+# SETUP #######################################################################
+
+base-image:
+  stage: build
+
+  when: manual
+  image: $DOCKER_IMAGE
+
+  services:
+    - name: $DOCKER_IMAGE
+      command: ["--experimental"]
+
+  before_script:
+    - docker login -u $ART_USERNAME -p $ART_TOKEN $ART_REGISTRY
+
+  script:
+    - DOCKER_BUILDKIT=1 docker build --pull --ssh default --no-cache -t $IMAGE:base-$BASE_IMAGE_VERSION -f Dockerfile.base .
+    - docker push $IMAGE:base-$BASE_IMAGE_VERSION

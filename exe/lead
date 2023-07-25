@@ -1,0 +1,20 @@
+#!/usr/bin/env ruby
+
+require 'dry/cli'
+
+require 'lead'
+require 'lead/cli'
+require 'lead/cli/commands/release'
+require 'lead/cli/commands/git'
+require 'lead/cli/commands/forward'
+
+Lead::CLI::Commands.register 'release bump', Lead::CLI::Commands::Release::Bump
+Lead::CLI::Commands.register 'release current', Lead::CLI::Commands::Release::Current
+Lead::CLI::Commands.register 'release next', Lead::CLI::Commands::Release::Next
+
+Lead::CLI::Commands.register 'git find', Lead::CLI::Commands::Git::Find
+Lead::CLI::Commands.register 'git compare', Lead::CLI::Commands::Git::Compare
+
+Lead::CLI::Commands.register 'forward all', Lead::CLI::Commands::Forward::All
+
+Dry::CLI.new(Lead::CLI::Commands).call

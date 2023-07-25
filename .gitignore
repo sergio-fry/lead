@@ -1,0 +1,19 @@
+/.bundle/
+/.env.local
+/.releaserc
+/.vimrc
+/.yardoc
+/_yardoc/
+/coverage/
+/doc/
+/pkg/
+/spec/reports/
+/tmp/
+/tags
+
+# rspec failure tracking
+.rspec_status
+
+automator/.byebug_history
+
+.byebug_history
